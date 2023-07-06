@@ -44,7 +44,7 @@ TZListNode* createNode(uint32_t id, uint32_t index);
 // expirationTime 过期时间.单位:ms
 // deltaIndexMax 最大不同的序号.如果序号是1个字节,建议是250,如果是2个字节建议是65000
 bool DFDetectorLoad(int expirationTime, uint32_t deltaIndexMax) {
-    gExpirationTime = expirationTime * TZTIME_MILLISECOND;
+    gExpirationTime = expirationTime;
     gDeltaIndexMax = deltaIndexMax;
 
     gMid = TZMallocRegister(0, TAG, MALLOC_TOTAL);
@@ -65,12 +65,12 @@ bool DFDetectorLoad(int expirationTime, uint32_t deltaIndexMax) {
 static int checkExpireTask(void) {
     static struct pt pt = {0};
     static TZListNode* node = NULL;
-    static uint32_t time = 0;
+    static uint64_t time = 0;
     static tUnit* unit;
     
     PT_BEGIN(&pt);
 
-    time = TZTimeGetSecond();
+    time = TZTimeGetMillsecond();
     for (;;) {
         node = TZListGetHeader(gList);
         if (node == NULL) {
@@ -98,7 +98,7 @@ bool DFDetectorQuery(uint32_t id, uint32_t index) {
     }
 
     TZListNode* nodeLast = NULL;
-    uint32_t timeNow = TZTimeGetSecond();
+    uint64_t timeNow = TZTimeGetMillsecond();
     tUnit* unit;
     for (;;) {
         nodeLast = node->Last;
@@ -150,7 +150,7 @@ static void removeAllExpirationNode(TZListNode* startNode) {
 
 // DFDetectorInsert 插入帧信息.如果是重复帧,则插入失败
 bool DFDetectorInsert(uint32_t id, uint32_t index) {
-    if (DFDetectorQuery(id, index)) {
+    if (DFDetectorQuery(id, index) == true) {
         return false;
     }
 
@@ -161,7 +161,8 @@ bool DFDetectorInsert(uint32_t id, uint32_t index) {
             break;
         }
         // 如果链表是空的都不能插入,则插入失败返回,否则删除最旧节点
-        if (TZListIsEmpty(gList)) {
+        if (TZListIsEmpty(gList) == true) {
+            LE(TAG, "insert fail!list is error!");
             return false;
         }
         TZListRemove(gList, TZListGetHeader(gList));
@@ -184,7 +185,7 @@ TZListNode* createNode(uint32_t id, uint32_t index) {
     tUnit* unit = (tUnit*)node->Data;
     unit->id = id;
     unit->index = index;
-    unit->time = TZTimeGetSecond();
+    unit->time = TZTimeGetMillsecond();
 
     return node;
 }
