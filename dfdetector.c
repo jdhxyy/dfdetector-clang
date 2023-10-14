@@ -11,7 +11,6 @@
 #include "lagan.h"
 
 #define TAG "dftector"
-#define MALLOC_TOTAL 2048
 
 #pragma pack(1)
 
@@ -19,7 +18,7 @@
 typedef struct {
     uint32_t id;
     uint32_t index;
-    uint64_t time;
+    uint32_t time;
 } tUnit;
 
 #pragma pack()
@@ -38,16 +37,17 @@ static uint32_t absMy(uint32_t num1, uint32_t num2);
 // removeAllExpirationNode 删除从首节点到startNode节点的所有过期节点
 static void removeAllExpirationNode(TZListNode* startNode);
 
-TZListNode* createNode(uint32_t id, uint32_t index);
+static TZListNode* createNode(uint32_t id, uint32_t index);
 
 // DFDetectorLoad 模块载入
-// expirationTime 过期时间.单位:ms
-// deltaIndexMax 最大不同的序号.如果序号是1个字节,建议是250,如果是2个字节建议是65000
-bool DFDetectorLoad(int expirationTime, uint32_t deltaIndexMax) {
+// expirationTime 过期时间.单位:s
+// deltaIndexMax 最大不同的序号.如果旧序号与新序号之间的差值大于此值,则会删除旧序号
+// mallocTotal malloc最大字节数
+bool DFDetectorLoad(int expirationTime, uint32_t deltaIndexMax, int mallocTotal) {
     gExpirationTime = expirationTime;
     gDeltaIndexMax = deltaIndexMax;
 
-    gMid = TZMallocRegister(0, TAG, MALLOC_TOTAL);
+    gMid = TZMallocRegister(0, TAG, mallocTotal);
     gList = TZListCreateList(gMid);
 
     if (gMid == -1 || gList == 0) {
@@ -65,12 +65,12 @@ bool DFDetectorLoad(int expirationTime, uint32_t deltaIndexMax) {
 static int checkExpireTask(void) {
     static struct pt pt = {0};
     static TZListNode* node = NULL;
-    static uint64_t time = 0;
+    static uint32_t time = 0;
     static tUnit* unit;
     
     PT_BEGIN(&pt);
 
-    time = TZTimeGetMillsecond();
+    time = TZTimeGetSecond();
     for (;;) {
         node = TZListGetHeader(gList);
         if (node == NULL) {
@@ -98,7 +98,7 @@ bool DFDetectorQuery(uint32_t id, uint32_t index) {
     }
 
     TZListNode* nodeLast = NULL;
-    uint64_t timeNow = TZTimeGetMillsecond();
+    uint32_t timeNow = TZTimeGetSecond();
     tUnit* unit;
     for (;;) {
         nodeLast = node->Last;
@@ -171,7 +171,7 @@ bool DFDetectorInsert(uint32_t id, uint32_t index) {
     return true;
 }
 
-TZListNode* createNode(uint32_t id, uint32_t index) {
+static TZListNode* createNode(uint32_t id, uint32_t index) {
     TZListNode* node = TZListCreateNode(gList);
     if (node == NULL) {
         return NULL;
@@ -185,7 +185,7 @@ TZListNode* createNode(uint32_t id, uint32_t index) {
     tUnit* unit = (tUnit*)node->Data;
     unit->id = id;
     unit->index = index;
-    unit->time = TZTimeGetMillsecond();
+    unit->time = TZTimeGetSecond();
 
     return node;
 }

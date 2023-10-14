@@ -9,9 +9,10 @@
 #include "tztype.h"
 
 // DFDetectorLoad 模块载入
-// expirationTime 过期时间.单位:ms
-// deltaIndexMax 最大不同的序号.如果序号是1个字节,建议是250,如果是2个字节建议是65000
-bool DFDetectorLoad(int expirationTime, uint32_t deltaIndexMax);
+// expirationTime 过期时间.单位:s
+// deltaIndexMax 最大不同的序号.如果旧序号与新序号之间的差值大于此值,则会删除旧序号
+// mallocTotal malloc最大字节数
+bool DFDetectorLoad(int expirationTime, uint32_t deltaIndexMax, int mallocTotal);
 
 // DFDetectorQuery 查询是否有重复帧
 // 查询时会清除过期节点
